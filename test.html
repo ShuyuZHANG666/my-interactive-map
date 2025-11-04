@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏交互式地图</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background: #0a192f;
+            color: white;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .map-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a2a6c, #0a192f);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .map-title {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            color: #fff;
+            letter-spacing: 2px;
+        }
+        
+        .map-subtitle {
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .world-map {
+            width: 90%;
+            height: 80%;
+            background: url('https://images.unsplash.com/photo-1487088678257-3a541e6e3922?ixlib=rb-1.2.1&auto=format&fit=crop&w=2400&q=80') no-repeat center center;
+            background-size: cover;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .location-marker {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: #ff3366;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.8);
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 20;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+        }
+        
+        .location-marker:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+            background: #ff6699;
+        }
+        
+        .location-marker::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 51, 102, 0.3);
+            transform: translate(-50%, -50%);
+            animation: ripple 3s infinite;
+        }
+        
+        .location-name {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            bottom: -30px;
+            left: 50%;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .location-marker:hover .location-name {
+            opacity: 1;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 51, 102, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(255, 51, 102, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 51, 102, 0);
+            }
+        }
+        
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.5;
+            }
+            100% {
+                width: 60px;
+                height: 60px;
+                opacity: 0;
+            }
+        }
+        
+        /* 模态窗口样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1a2a6c, #0a192f);
+            width: 80%;
+            max-width: 900px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            animation: modalAppear 0.4s ease-out;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #ffcc00;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        
+        .close-btn:hover {
+            color: #ff3366;
+        }
+        
+        .modal-body {
+            padding: 0;
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 比例 */
+            height: 0;
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .modal-footer {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .location-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .instruction {
+            background: rgba(0, 0, 0, 0.6);
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            backdrop-filter: blur(5px);
+        }
+        
+        .instruction i {
+            margin-right: 8px;
+            color: #ffcc00;
+        }
+        
+        footer {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            font-size: 0.9rem;
+            opacity: 0.7;
+            z-index: 10;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .map-title {
+                font-size: 1.8rem;
+            }
+            
+            .modal-content {
+                width: 95%;
+            }
+            
+            .modal-title {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="map-container">
+            <h1 class="map-title">探索世界奇观
+                <div class="map-subtitle">点击标记点发现精彩视频</div>
+            </h1>
+            
+            <div class="world-map">
+                <!-- 标记点 -->
+                <div class="location-marker" style="top: 30%; left: 20%;" data-location="paris">
+                    <div class="location-name">巴黎</div>
+                </div>
+                
+                <div class="location-marker" style="top: 40%; left: 75%;" data-location="tokyo">
+                    <div class="location-name">东京</div>
+                </div>
+                
+                <div class="location-marker" style="top: 65%; left: 50%;" data-location="sydney">
+                    <div class="location-name">悉尼</div>
+                </div>
+                
+                <div class="location-marker" style="top: 35%; left: 50%;" data-location="cairo">
+                    <div class="location-name">开罗</div>
+                </div>
+                
+                <div class="location-marker" style="top: 55%; left: 15%;" data-location="rio">
+                    <div class="location-name">里约热内卢</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="instruction">
+                    <i class="fas fa-mouse-pointer"></i>点击地图上的标记点探索世界
+                </div>
+            </div>
+            
+            <footer>
+                交互式地图 &copy; 2023 | 使用HTML、CSS和JavaScript构建
+            </footer>
+        </div>
+    </div>
+    
+    <!-- 模态窗口 -->
+    <div class="modal" id="videoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalLocationName">地点名称</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="video-container">
+                    <iframe id="locationVideo" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p class="location-description" id="locationDescription">地点描述信息</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const markers = document.querySelectorAll('.location-marker');
+            const modal = document.getElementById('videoModal');
+            const closeModal = document.getElementById('closeModal');
+            const modalLocationName = document.getElementById('modalLocationName');
+            const locationVideo = document.getElementById('locationVideo');
+            const locationDescription = document.getElementById('locationDescription');
+            
+            // 地点信息
+            const locationData = {
+                paris: {
+                    name: "巴黎, 法国",
+                    videoId: "UfEiKK-iX70", // 埃菲尔铁塔视频
+                    description: "巴黎是法国的首都和最大城市，以其艺术、文化和时尚闻名于世。标志性建筑埃菲尔铁塔和卢浮宫吸引着全球游客。"
+                },
+                tokyo: {
+                    name: "东京, 日本",
+                    videoId: "QcGmpWx4DXQ", // 东京城市风光
+                    description: "东京是日本的首都，融合了传统与现代。从古老的寺庙到高科技的街区，这座城市提供了独特的文化体验。"
+                },
+                sydney: {
+                    name: "悉尼, 澳大利亚",
+                    videoId: "Gc6yAZ9my-0", // 悉尼歌剧院
+                    description: "悉尼是澳大利亚最大的城市，以其标志性的悉尼歌剧院和海港大桥而闻名，是一个充满活力的国际大都市。"
+                },
+                cairo: {
+                    name: "开罗, 埃及",
+                    videoId: "GaH_9F-1CJ8", // 埃及金字塔
+                    description: "开罗是埃及的首都，位于尼罗河畔。吉萨金字塔和狮身人面像就在城市附近，是古埃及文明的象征。"
+                },
+                rio: {
+                    name: "里约热内卢, 巴西",
+                    videoId: "U2W-7Xl5_Os", // 里约热内卢风光
+                    description: "里约热内卢以其迷人的海滩、狂欢节和基督像而闻名，是巴西文化和旅游的重要中心。"
+                }
+            };
+            
+            // 为每个标记点添加点击事件
+            markers.forEach(marker => {
+                marker.addEventListener('click', function() {
+                    const location = this.getAttribute('data-location');
+                    openModal(location);
+                });
+            });
+            
+            // 打开模态窗口
+            function openModal(location) {
+                const data = locationData[location];
+                if (data) {
+                    modalLocationName.textContent = data.name;
+                    locationVideo.src = `https://www.youtube.com/embed/${data.videoId}?autoplay=1`;
+                    locationDescription.textContent = data.description;
+                    modal.style.display = 'flex';
+                }
+            }
+            
+            // 关闭模态窗口
+            closeModal.addEventListener('click', function() {
+                modal.style.display = 'none';
+                locationVideo.src = '';
+            });
+            
+            // 点击模态窗口外部关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    locationVideo.src = '';
+                }
+            });
+            
+            // 按ESC键关闭模态窗口
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                    locationVideo.src = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
