@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全屏交互式地图</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 之前的CSS代码保持不变 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background: #0a192f;
+            color: white;
+        }
+        
+        /* ... 其余CSS代码 ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 之前的HTML结构保持不变 -->
+        <div class="map-container">
+            <h1 class="map-title">探索世界奇观
+                <div class="map-subtitle">点击标记点发现精彩视频</div>
+            </h1>
+            
+            <div class="world-map">
+                <div class="location-marker" style="top: 30%; left: 20%;" data-location="paris">
+                    <div class="location-name">巴黎</div>
+                </div>
+                
+                <div class="location-marker" style="top: 40%; left: 75%;" data-location="tokyo">
+                    <div class="location-name">东京</div>
+                </div>
+                
+                <div class="location-marker" style="top: 65%; left: 50%;" data-location="sydney">
+                    <div class="location-name">悉尼</div>
+                </div>
+                
+                <div class="location-marker" style="top: 35%; left: 50%;" data-location="cairo">
+                    <div class="location-name">开罗</div>
+                </div>
+                
+                <div class="location-marker" style="top: 55%; left: 15%;" data-location="rio">
+                    <div class="location-name">里约热内卢</div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="instruction">
+                    <i class="fas fa-mouse-pointer"></i>点击地图上的标记点探索世界
+                </div>
+            </div>
+            
+            <footer>
+                交互式地图 &copy; 2023 | 使用HTML、CSS和JavaScript构建
+            </footer>
+        </div>
+    </div>
+    
+    <div class="modal" id="videoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalLocationName">地点名称</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="video-container">
+                    <iframe id="locationVideo" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <p class="location-description" id="locationDescription">地点描述信息</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 之前的JavaScript代码保持不变
+        document.addEventListener('DOMContentLoaded', function() {
+            const markers = document.querySelectorAll('.location-marker');
+            const modal = document.getElementById('videoModal');
+            const closeModal = document.getElementById('closeModal');
+            const modalLocationName = document.getElementById('modalLocationName');
+            const locationVideo = document.getElementById('locationVideo');
+            const locationDescription = document.getElementById('locationDescription');
+            
+            const locationData = {
+                paris: {
+                    name: "巴黎, 法国",
+                    videoId: "UfEiKK-iX70",
+                    description: "巴黎是法国的首都和最大城市，以其艺术、文化和时尚闻名于世。标志性建筑埃菲尔铁塔和卢浮宫吸引着全球游客。"
+                },
+                tokyo: {
+                    name: "东京, 日本",
+                    videoId: "QcGmpWx4DXQ",
+                    description: "东京是日本的首都，融合了传统与现代。从古老的寺庙到高科技的街区，这座城市提供了独特的文化体验。"
+                },
+                sydney: {
+                    name: "悉尼, 澳大利亚",
+                    videoId: "Gc6yAZ9my-0",
+                    description: "悉尼是澳大利亚最大的城市，以其标志性的悉尼歌剧院和海港大桥而闻名，是一个充满活力的国际大都市。"
+                },
+                cairo: {
+                    name: "开罗, 埃及",
+                    videoId: "GaH_9F-1CJ8",
+                    description: "开罗是埃及的首都，位于尼罗河畔。吉萨金字塔和狮身人面像就在城市附近，是古埃及文明的象征。"
+                },
+                rio: {
+                    name: "里约热内卢, 巴西",
+                    videoId: "U2W-7Xl5_Os",
+                    description: "里约热内卢以其迷人的海滩、狂欢节和基督像而闻名，是巴西文化和旅游的重要中心。"
+                }
+            };
+            
+            markers.forEach(marker => {
+                marker.addEventListener('click', function() {
+                    const location = this.getAttribute('data-location');
+                    openModal(location);
+                });
+            });
+            
+            function openModal(location) {
+                const data = locationData[location];
+                if (data) {
+                    modalLocationName.textContent = data.name;
+                    locationVideo.src = `https://www.youtube.com/embed/${data.videoId}?autoplay=1`;
+                    locationDescription.textContent = data.description;
+                    modal.style.display = 'flex';
+                }
+            }
+            
+            closeModal.addEventListener('click', function() {
+                modal.style.display = 'none';
+                locationVideo.src = '';
+            });
+            
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    locationVideo.src = '';
+                }
+            });
+            
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    modal.style.display = 'none';
+                    locationVideo.src = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
